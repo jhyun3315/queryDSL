@@ -1,15 +1,21 @@
 package study.querydsl;
 
 import com.querydsl.jpa.impl.JPAQueryFactory;
+
 import org.junit.jupiter.api.BeforeEach;import org.junit.jupiter.api.Test;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+
 import study.querydsl.entity.Member;
 import study.querydsl.entity.QMember;
 import study.querydsl.entity.Team;
+
 import javax.persistence.EntityManager;
+
 import static org.assertj.core.api.Assertions.*;
+import static study.querydsl.entity.QMember.*;
 
 @SpringBootTest
 @Transactional
@@ -52,13 +58,32 @@ public class QuerydslBasicTest {
     //member1을 찾아라.
     @Test
     public void startQuerydsl() {
-        QMember m = new QMember("m");
+//        QMember qMember = new QMember("m"); //별칭 직접 지정
+//        Member findMember = queryFactory
+//                .select(m)
+//                .from(m)
+//                .where(m.username.eq("member1"))//파라미터 바인딩 처리
+//                .fetchOne();
+//        assertThat(findMember.getUsername()).isEqualTo("member1");
 
+
+        QMember qMember = QMember.member; //기본 인스턴스 사용
         Member findMember = queryFactory
-                .select(m)
-                .from(m)
-                .where(m.username.eq("member1"))//파라미터 바인딩 처리
+                .select(member)
+                .from(member)
+                .where(member.username.eq("member1"))//파라미터 바인딩 처리
                 .fetchOne();
+        assertThat(findMember.getUsername()).isEqualTo("member1");
+
+    }
+
+    @Test
+    public void search(){
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1").and(member.age.eq(10)))
+                .fetchOne();
+
         assertThat(findMember.getUsername()).isEqualTo("member1");
     }
 
