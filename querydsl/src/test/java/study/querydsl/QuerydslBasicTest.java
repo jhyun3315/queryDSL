@@ -287,6 +287,53 @@ public class QuerydslBasicTest {
 
     }
 
+    /**
+     *  팀 A에 소속된 모든 회원 조회 ( join() 사용)
+     *  join 종류
+     *  join() , innerJoin() : 내부 조인(inner join)
+     *  leftJoin() : left 외부 조인(left outer join)
+     *  rightJoin() : rigth 외부 조인(rigth outer join)
+     */
+    @Test
+    public void join(){
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .join(member.team, team)
+                .where(team.name.eq("teamA"))
+                .fetch();
 
+        assertThat(result)
+                .extracting("username")
+                .containsExactly("member1", "member2");
+
+    }
+
+    /**
+     * 세타 조인(연관관계가 없는 필드로 조인)
+     * ----------------------------------
+     * from 절에 여러 엔티티를 선택해서 세타 조인
+     * but 외부 조인 불가능.
+     * 조인 on을 사용하면 외부 조인 가능
+     */
+
+    // 회원의 이름이 팀 이름과 같은 회원 조회
+    @Test
+    public void theta_join(){
+
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+        em.persist(new Member("teamC"));
+        // 모든 회원, 팀을 가지고 와서 다 조인을 하고 where절로 필터링하게됨
+        // db가 최적화를 하긴함. (db마다 성능 최적화 방법이 다름)
+        List<Member> result = queryFactory
+                .select(member)
+                .from(member, team)
+                .where(member.username.eq(team.name))
+                .fetch();
+
+        assertThat(result)
+                .extracting("username")
+                .containsExactly("teamA", "teamB");
+    }
 
 }
