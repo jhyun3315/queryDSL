@@ -198,7 +198,41 @@ public class QuerydslBasicTest {
         assertThat(member5.getUsername()).isEqualTo("member5");
         assertThat(member6.getUsername()).isEqualTo("member6");
         assertThat(memberNull.getUsername()).isNull();
+    }
 
+
+    /**
+     *  JPQL vs queryDSL
+     *  offset과 limit을 jpql에서는 직접 넣지 않음
+     *  쿼리에서 넣는게 아니라 밖에서 넣어줌
+     */
+    @Test
+    public void paging1(){
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .orderBy(member.username.desc())
+                .offset(1)
+                .limit(2)
+                .fetch();
+
+        assertThat(result.size()).isEqualTo(2);
+    }
+
+    // 전체 조회수가 필요한 경우
+    // ( countTotal 쿼리를 따로 분리해서 쓰는 경우가 있음 -> count쿼리를 분리해서 더 단순하게 조회할수 있음음
+    @Test
+    public void paging2(){
+        QueryResults<Member> queryResults = queryFactory
+                .selectFrom(member)
+                .orderBy(member.username.desc())
+                .offset(1)
+                .limit(2)
+                .fetchResults();
+
+        assertThat(queryResults.getTotal()).isEqualTo(4);
+        assertThat(queryResults.getLimit()).isEqualTo(2);
+        assertThat(queryResults.getOffset()).isEqualTo(1);
+        assertThat(queryResults.getResults().size()).isEqualTo(2); // contents의 사이즈
     }
 
 }
