@@ -16,6 +16,8 @@ import study.querydsl.entity.QTeam;
 import study.querydsl.entity.Team;
 
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.PersistenceUnit;
 
 import java.util.List;
 
@@ -334,6 +336,94 @@ public class QuerydslBasicTest {
         assertThat(result)
                 .extracting("username")
                 .containsExactly("teamA", "teamB");
+    }
+
+    /**
+     * 예) 회원과 팀을 조인하면서, 팀 이름이 teamA인 팀만 조인, 회원은 모두 조회
+     * JPQL: SELECT m, t FROM Member m LEFT JOIN m.team t on t.name = 'teamA'
+     * SQL: SELECT m.*, t.* FROM Member m LEFT JOIN Team t ON m.TEAM_ID=t.id and t.name='teamA'
+     * ----------------------------------------------------------------------------------------
+     * on 절을 활용해 조인 대상을 필터링 할때 외부조인이 아니라 내부조인(inner join)을 사용하면,
+     * where 절에서 필터링 하는 것과 기능이 동일하다.
+     * 따라서 on 절을 활용한 조인 대상 필터링을 사용할 때, 내부조인 이면 익숙한 where 절로 해결하고
+     * 정말 외부조인이 필요한 경우에만 이 기능을 사용하자.
+     */
+    @Test
+    public void join_on_filtering(){
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(member.team, team).on(team.name.eq("teamA"))
+                .fetch();
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
+
+    /**
+     * 2. 연관관계 없는 엔티티 외부 조인
+     * 예) 회원의 이름과 팀의 이름이 같은 대상 외부 조인
+     * JPQL: SELECT m, t FROM Member m LEFT JOIN Team t on m.username = t.name
+     * SQL: SELECT m.*, t.* FROM Member m LEFT JOIN Team t ON m.username = t.name
+     */
+    @Test
+    public void join_on_no_relation() throws Exception {
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(team).on(member.username.eq(team.name))
+                .fetch();
+        for (Tuple tuple : result) {
+            System.out.println("t=" + tuple);
+        }
+    }
+
+    // 테스트 증명시 사용
+    @PersistenceUnit
+    EntityManagerFactory emf; // EntityManager를 만드는 팩토리
+
+    @Test
+    public void NofetchJoin(){
+        em.flush();
+        em.flush();
+
+        // Member 엔티티에서 Team 엔티티와의 조인 매칭을 LAZY으로 해서
+        // DB에서 조회할때 Member만 조회됨.
+        Member findMemeber = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        //  isLoaded()를 통해 로딩된 엔티티인지(초기화) 아닌지를 알수 있음.
+        //  패치 조인이 적용이 안되면 로딩이 되면 안됨 (false가 나오는게 맞음)
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMemeber.getTeam());
+        assertThat(loaded).as("패치 조인 미적용").isFalse();
+
+    }
+
+
+    /**
+     *  패치 조인 사용 -> 실무에서 많이 씀.
+     */
+    @Test
+    public void fetchJoin(){
+        em.flush();
+        em.flush();
+
+        // 패치 조인을 사용하여
+        // member1 를 조회할때 연관된 team을 한 쿼리로 다 끌고옴
+        Member findMemeber = queryFactory
+                .selectFrom(member)
+                .join(member.team, team).fetchJoin()
+                .where(member.username.eq("member1"))
+                .fetchOne();
+
+        boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMemeber.getTeam());
+        assertThat(loaded).as("패치 조인 미적용").isFalse();
+
     }
 
 }
