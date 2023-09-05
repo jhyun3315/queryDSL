@@ -2,6 +2,7 @@ package study.querydsl;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
@@ -517,12 +518,45 @@ public class QuerydslBasicTest {
     }
 
 
-    // DB는 데이터를 최소한의 필터링으로 가져오는 걸로만 하고
-    // 나머지 복잡한 쿼리같은 경우에는 로직으로 풀것.
-    // 한방 쿼리가 항상 옳지 않다
-    // 대용량 트래픽일때, 쿼리 한방이 소중하긴 하지만 복잡/길게 하는것보다
-    // 쿼리를 두번, 세번 나누는게 나을수도 있다.
+    // DB는 데이터를 최소한의 필터링으로 가져오는 걸로만 하고 나머지 복잡한 쿼리같은 경우에는 애플리케이션에서 로직으로 풀것.
+    // 한방 쿼리가 항상 옳지 않다 !
+    // 대용량 트래픽일때, 쿼리 한방이 소중하긴 하지만 복잡/길게 하는것보다 쿼리를 두번, 세번 나누는게 나을수도 있다.
 
+    /**
+     * Case문 - 단순 조건
+     */
+    @Test
+    public void basicCase(){
+        List<String> result = queryFactory
+                .select(member.age
+                        .when(10).then("열살")
+                        .when(20).then("스무살")
+                        .otherwise("기타"))
+                .from(member)
+                .fetch();
+
+        for(String s : result){
+            System.out.println("s = "+s);
+        }
+    }
+
+    /**
+     * Case문 - 복잡한 조건
+     */
+    @Test
+    public void complexCase(){
+        List<String> result = queryFactory
+                .select(new CaseBuilder()
+                        .when(member.age.between(0, 20)).then("0~20살")
+                        .when(member.age.between(21, 30)).then("21~30살")
+                        .otherwise("기타"))
+                .from(member)
+                .fetch();
+
+        for(String s : result){
+            System.out.println("s = "+s);
+        }
+    }
 
 
 
