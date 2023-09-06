@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import study.querydsl.dto.MemberDto;
+import study.querydsl.dto.QMemberDto;
 import study.querydsl.entity.Member;
 import study.querydsl.entity.QMember;
 import study.querydsl.entity.Team;
@@ -153,9 +154,9 @@ public class QuerydslBasicTest {
         List<Member> fetch = queryFactory.selectFrom(member)
                 .fetch();
 
-        Member fetchOne = queryFactory
-                .selectFrom(QMember.member)
-                .fetchOne();
+//        Member fetchOne = queryFactory
+//                .selectFrom(QMember.member)
+//                .fetchOne();
 
         Member fetchFirst = queryFactory
                 .selectFrom(QMember.member)
@@ -731,5 +732,37 @@ public class QuerydslBasicTest {
                  .fetch();
          */
     }
+
+    /**
+     * QueryProjection 사용하기
+     * --------------------------------------
+     * 제일 깔끔한 해결책이지만, 약간의 단점이 있음.
+     * 이 방법은 컴파일러로 타입을 체크할 수 있으므로 가장 안전한 방법이다.
+     * 다만 DTO에 QueryDSL 어노테이션을 유지해야 하는 점과 DTO까지 Q 파일을 생성해야 하는 단점이 있다
+     * (DTO가 여러 계층에서 사용되기 때문에 어노테이션 때문에 queryDSL에 의존적이게됨.)
+     */
+    @Test
+    public void findDtoByQueryProjection(){
+        List<MemberDto> result = queryFactory
+                .select(new QMemberDto(member.username, member.age))
+                .from(member)
+                .fetch();
+
+        for(MemberDto memberDto : result){
+            System.out.println("memberDto = "+memberDto);
+        }
+    }
+
+    /*
+    distinct( JPQL의 distinct와 같다.) 사용법
+
+        List<String> result = queryFactory
+             .select(member.username).distinct()
+             .from(member)
+             .fetch();
+     */
+
+
+
 
 }
