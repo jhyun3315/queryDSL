@@ -592,4 +592,44 @@ public class QuerydslBasicTest {
         }
     }
 
+    /**
+     *  프로젝션: select 대상 지정
+     *  프로젝션 대상이 하나인 경우, 타입을 명확하게 지정할 수 있음
+     */
+    @Test
+    public void simpleProjection(){
+
+        List<String> result = queryFactory
+                .select(member.username)
+                .from(member)
+                .fetch();
+
+        for(String s : result){
+            System.out.println("s = "+s);
+        }
+    }
+
+    /**
+     *  프로젝션 대상이 여럿인 경우, 프로젝션 대상이 둘 이상이면 튜플이나 DTO로 조회
+     *  ------------------------
+     *  Tuple을 respository를 넘어가는건 옳지 않음.
+     *  respository계층 (DAO) 안에서만 쓰도록 설계할 것.
+     */
+    @Test
+    public void tupleProjection(){
+        List<Tuple> result = queryFactory
+                .select(member.username, member.age)
+                .from(member)
+                .fetch();
+
+        for(Tuple tuple : result){
+            String username = tuple.get(member.username);
+            Integer age = tuple.get(member.age);
+            System.out.println("username = " + username);
+            System.out.println("age = " + age);
+        }
+
+    }
+
+
 }
