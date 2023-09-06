@@ -879,4 +879,45 @@ public class QuerydslBasicTest {
         em.clear();
     }
 
+    /**
+     * SQL function 호출하기
+     * ----------------------------------------------------------
+     * SQL function은 JPA와 같이 Dialect에 등록된 내용만 호출할 수 있다
+     */
+    @Test
+    public void sqlFunction(){
+        // member M으로 변경하는 replace 함수 사용
+        List<String> result = queryFactory
+                .select(Expressions.stringTemplate("function('replace', {0}, {1}, {2})",
+                        member.username, "member", "M"))
+                .from(member)
+                .fetch();
+
+
+        for(String s : result){
+            System.out.println("s = "+s);
+        }
+
+        //  s = M1
+        //  s = M2
+        //  s = M3
+        //  s = M4
+    }
+
+    @Test
+    public void sqlFunction2(){
+        //소문자로 변경하기
+//        List<String> result = queryFactory
+//                .select(member.username)
+//                .from(member)
+//                .where(member.username.eq(Expressions.stringTemplate("function('lower', {0})", member.username)))
+//                .fetch();
+
+        List<String> result = queryFactory
+                .select(member.username)
+                .from(member)
+                .where(member.username.eq(member.username.lower()))
+                .fetch();
+        for(String s : result) System.out.println("s = " +s);
+    }
 }
