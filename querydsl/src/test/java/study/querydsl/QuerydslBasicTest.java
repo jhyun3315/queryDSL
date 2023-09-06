@@ -3,6 +3,7 @@ package study.querydsl;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Commit;
 import org.springframework.transaction.annotation.Transactional;
 
 import study.querydsl.dto.MemberDto;
@@ -763,6 +765,9 @@ public class QuerydslBasicTest {
              .fetch();
      */
 
+    /**
+     *  동적 쿼리 - BooleanBuilder 사용
+     */
     @Test
     public void dynamicQuery_BooleanBuilder(){
         String usernameParam = "member1";
@@ -792,5 +797,86 @@ public class QuerydslBasicTest {
                 .fetch();
     }
 
+    /**
+     * 동적 쿼리 -Where 다중 파라미터 사용
+     * --------------------------------
+     * BooleanBuilder보다 깔끔함
+     * where 조건에 null 값은 무시된다.
+     * 메서드를 다른 쿼리에서도 재활용 할 수 있다.
+     * 쿼리 자체의 가독성이 높아진다.
+     */
+    @Test
+    public void dynamicQuery_WherePara(){
+        String usernameParam = "member1";
+        Integer ageParam = null;
+
+        List<Member> result = searchMember2(usernameParam, ageParam);
+        assertThat(result.size()).isEqualTo(1);
+    }
+
+    private List<Member> searchMember2(String usernameCond, Integer ageCond) {
+        return queryFactory
+                .selectFrom(member)
+                .where(usernameEq(usernameCond), ageEq(ageCond))
+                .fetch();
+    }
+
+    private Predicate usernameEq(String usernameCond) {
+        if(usernameCond == null) return null;
+        return member.username.eq(usernameCond);
+    }
+
+    private Predicate ageEq(Integer ageCond) {
+        if(ageCond == null) return null;
+        return member.age.eq(ageCond);
+    }
+
+    //조합 가능 -> 쓰려면 관련 매서드 타입이 모두 BooleanExpression 여야함
+//    private BooleanExpression allEq(String usernameCond, Integer ageCond) {
+//        return usernameEq(usernameCond).and(ageEq(ageCond));
+//    }
+
+    /**
+     * 수정, 삭제 벌크 연산
+     * ------------------
+     * 쿼리 한번으로 대량 데이터 수정하기
+     * but, 벌크 연산을 해버리면 DB에는 값이 바뀌지만 영속성 컨텍스트에는 값이 바뀌지 않는다
+     * (영속석 컨텍스트가 우선권을 가지게됨)
+     * 때문에 항상 배치 쿼리를 실행하고 나면 영속성 컨텍스트를 초기화 하는 것이 안전하다
+     */
+    @Test
+    // @Commit test에서 @Transaction이 되어있으면 테스트 후에 rollback을 해서 DB에 안남음
+    public void bulkUpdate(){
+        // 회원의 나이가 28 미만인 경우, 비회원으로 바꿈
+        // count : 영향을 받은 데이터 개수
+        long count1 = queryFactory
+                .update(member)
+                .set(member.username, "비회원")
+                .where(member.age.lt(28))
+                .execute();
+
+        // 기존 숫자에 1 더하기
+        long count2 = queryFactory
+                .update(member)
+                .set(member.age, member.age.add(1))
+                .execute();
+
+        // 기존 숫자에 2씩 곱하기
+        long count3 = queryFactory
+                .update(member)
+                .set(member.age, member.age.multiply(2))
+                .execute();
+
+        // 쿼리 한번으로 대량 데이터 삭제
+        // 18살 이상의 회원 모두 삭제
+        long count4 = queryFactory
+                .delete(member)
+                .where(member.age.gt(18))
+                .execute();
+
+        // 영속성 컨텍스트 초기화
+        em.flush();
+        em.clear();
+    }
 
 }
